@@ -1,3 +1,4 @@
 /dist/
 /node_modules/
 /.cluade/
+/vscode-for-co-dev-launcher/node_modules/

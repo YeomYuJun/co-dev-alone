@@ -1,0 +1,63 @@
+{
+  "name": "vscode-co-dev-launcher",
+  "displayName": "Co-Dev Launcher",
+  "description": "CO-DEV-FRAMEWORK 역할 기반 Claude Code 세션 런처",
+  "version": "0.1.0",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "co-dev.newSession",
+        "title": "Co-Dev: New Session"
+      },
+      {
+        "command": "co-dev.newDeveloperSession",
+        "title": "Co-Dev: New Developer Session"
+      },
+      {
+        "command": "co-dev.newEvaluatorSession",
+        "title": "Co-Dev: New Evaluator Session"
+      }
+    ],
+    "configuration": {
+      "title": "Co-Dev Launcher",
+      "properties": {
+        "codev.roleGuideRelativePath": {
+          "type": "string",
+          "default": "co-dev/ROLE-GUIDE.md",
+          "description": "workspace root 기준 ROLE-GUIDE.md 상대 경로"
+        },
+        "codev.claudeCommand": {
+          "type": "string",
+          "default": "claude",
+          "description": "claude CLI 명령어 (절대경로 지정 가능)"
+        },
+        "codev.defaultRoles": {
+          "type": "object",
+          "description": "ROLE-GUIDE.md 없을 때 사용하는 fallback 역할 정의 (key: 역할명, value: 프롬프트)",
+          "default": {
+            "Developer": "You are a Developer Session in the Co-Dev Framework. Your primary mission is to implement tasks defined in TASK.md based on Acceptance Criteria. Read files in this order: README.md, co-dev/TASK.md, co-dev/communication/eval-state.md, co-dev/communication/CHANGELOG.md (last 5), co-dev/communication/dev-state.md, co-dev/communication/ISSUES.md, sessions/dev/ latest Handoff Note. Responsibilities: implement per TASK.md Acceptance Criteria, append to CHANGELOG.md after completion, overwrite dev-state.md with file hashes, log Decision Log, register key decisions to DECISIONS.md, write Handoff Note at session end. Forbidden: do not evaluate, do not modify TASK.md Acceptance Criteria without user approval, do not modify eval-state.md or eval-history.md, do not implement Out of Scope items from README.md.",
+            "Evaluator": "You are an Evaluator Session in the Co-Dev Framework. Your primary mission is to evaluate the current implementation state based on TASK.md and EVAL-CRITERIA.md, and judge the health of development direction. Read files in this order: README.md, co-dev/EVAL-CRITERIA.md, co-dev/TASK.md, co-dev/communication/eval-state.md, co-dev/communication/dev-state.md, co-dev/communication/CHANGELOG.md (only entries since last eval), changed files based on file hashes. Responsibilities: judge TASK Acceptance Criteria fulfillment, analyze trend vs previous eval (IMPROVING/STAGNANT/REGRESSING), detect Scope Drift against README.md, overwrite eval-state.md, append to eval-history.md, write detailed eval report with Handoff Note in sessions/eval/. Forbidden: do not modify code, do not directly instruct implementation methods (suggest direction only), do not modify TASK.md Acceptance Criteria."
+          }
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "npx vsce package"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0",
+    "@vscode/vsce": "^2.22.0"
+  }
+}
