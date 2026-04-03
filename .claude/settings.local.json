@@ -5,7 +5,10 @@
       "mcp__filesystem__list_directory",
       "mcp__filesystem__read_text_file",
       "Read(//d/servers/vscode-for-co-dev-launcher/**)",
-      "Read(//d/servers/**)"
+      "Read(//d/servers/**)",
+      "mcp__co-dev__codev_list_sessions",
+      "mcp__co-dev__codev_get_context",
+      "mcp__co-dev__codev_read_checkpoint"
     ]
   }
 }

@@ -4,7 +4,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { CHARACTER_LIMIT } from "../constants.js";
-import { listCheckpointMetas, loadCheckpoint, loadLatestCheckpoint, nextCheckpointIndex, saveCheckpoint } from "../storage.js";
+import { listCheckpointMetas, loadCheckpoint, loadLatestCheckpoint, saveCheckpoint } from "../storage.js";
 import type { Checkpoint } from "../types.js";
 
 const SessionIdSchema = z.string().min(1).max(128).regex(/^[a-zA-Z0-9_\-]+$/).describe("Session identifier");
@@ -71,19 +71,21 @@ Returns: Confirmation with checkpoint_id and full [CHECKPOINT] block.`,
     inputSchema: SaveCheckpointInputSchema,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
   }, async (params) => {
-    const index = nextCheckpointIndex(params.session_id);
-    const checkpoint_id = `${params.session_id}-${index}`;
-    const cp: Checkpoint = {
-      checkpoint_id, session_id: params.session_id, index,
-      completed: params.completed, pending: params.pending,
-      next_session_goal: params.next_session_goal, open_issues: params.open_issues,
-      created_at: new Date().toISOString(),
-    };
-    try { saveCheckpoint(cp); } catch (err) {
+    let cp: Checkpoint;
+    try {
+      cp = saveCheckpoint({
+        session_id: params.session_id,
+        completed: params.completed,
+        pending: params.pending,
+        next_session_goal: params.next_session_goal,
+        open_issues: params.open_issues,
+        created_at: new Date().toISOString(),
+      });
+    } catch (err) {
       return { content: [{ type: "text", text: `Error saving checkpoint: ${err instanceof Error ? err.message : String(err)}` }] };
     }
     return {
-      content: [{ type: "text", text: `[DONE] Checkpoint '${checkpoint_id}' saved.\n\n${formatCheckpointMarkdown(cp)}` }],
+      content: [{ type: "text", text: `[DONE] Checkpoint '${cp.checkpoint_id}' saved.\n\n${formatCheckpointMarkdown(cp)}` }],
       structuredContent: { saved: true, checkpoint: cp } as Record<string, unknown>,
     };
   });
