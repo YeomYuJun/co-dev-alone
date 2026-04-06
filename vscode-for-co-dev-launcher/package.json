@@ -7,7 +7,9 @@
   "engines": {
     "vscode": "^1.85.0"
   },
-  "categories": ["Other"],
+  "categories": [
+    "Other"
+  ],
   "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
@@ -23,6 +25,10 @@
       {
         "command": "co-dev.newEvaluatorSession",
         "title": "Co-Dev: New Evaluator Session"
+      },
+      {
+        "command": "co-dev.showPanel",
+        "title": "Co-Dev: Show Session Panel"
       }
     ],
     "configuration": {
@@ -52,12 +58,18 @@
   "scripts": {
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "package": "npx vsce package"
+    "bundle": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node",
+    "package": "npm run bundle && npx vsce package"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
   },
   "devDependencies": {
-    "@types/vscode": "^1.85.0",
     "@types/node": "^20.0.0",
-    "typescript": "^5.3.0",
-    "@vscode/vsce": "^2.22.0"
+    "@types/vscode": "^1.85.0",
+    "@types/ws": "^8.5.13",
+    "@vscode/vsce": "^2.22.0",
+    "esbuild": "^0.28.0",
+    "typescript": "^5.3.0"
   }
 }

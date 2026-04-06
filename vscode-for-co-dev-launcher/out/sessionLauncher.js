@@ -36,52 +36,60 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.launchSession = launchSession;
 const path = __importStar(require("path"));
 const vscode = __importStar(require("vscode"));
+const child_process_1 = require("child_process");
 const config_1 = require("./config");
-/**
- * 역할 이름에서 session_id용 슬러그를 생성한다.
- * "Developer Session" → "dev", "Evaluator Session" → "eval"
- */
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function roleSlug(roleName) {
-    const lower = roleName.toLowerCase();
-    if (lower.includes('eval')) {
-        return 'eval';
-    }
-    return 'dev';
+    return roleName.toLowerCase().includes('eval') ? 'eval' : 'dev';
 }
 /**
- * 프로젝트 폴더명 + 역할 + 날짜로 session_id를 생성한다.
- * 형식: {project}-{role}-{YYYYMMDD}  (MCP 도구 허용 문자만 포함)
+ * co-dev MCP 도구에서 사용할 session_id 생성.
+ * 형식: {project}-{role}-{YYYYMMDD}
  */
 function buildSessionId(roleName, workspaceRoot) {
     const project = path.basename(workspaceRoot).replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
     const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     return `${project}-${roleSlug(roleName)}-${date}`;
 }
+// ─── Launch ───────────────────────────────────────────────────────────────────
 /**
- * 역할 프롬프트를 --append-system-prompt 인자로 안전하게 이스케이프.
- * Windows cmd / bash 양쪽에서 동작하도록 처리.
+ * DirectConnect 서버를 통해 claude 세션을 자식 프로세스로 스폰한다.
+ * - spawn() 사용으로 쉘 이스케이프 불필요
+ * - --sdk-url로 Extension이 세션을 완전히 제어
+ * - stdout/stderr는 OutputChannel로 출력 (WS 메시지 처리 전 fallback)
  */
-function escapePrompt(prompt) {
-    return prompt
-        .replace(/\\/g, '\\\\') // 백슬래시 먼저
-        .replace(/"/g, '\\"') // 쌍따옴표
-        .replace(/\r?\n/g, '\\n'); // 줄바꿈 → \n 리터럴
-}
-/**
- * 새 통합 터미널을 열고, 지정된 역할로 claude 세션을 시작한다.
- * session_id를 프롬프트 첫 줄에 주입해 MCP 도구 호출 시 일관된 ID를 보장한다.
- */
-function launchSession(roleName, rolePrompt, workspaceRoot) {
+function launchSession(roleName, rolePrompt, workspaceRoot, server) {
     const claudeCmd = (0, config_1.getClaudeCommand)();
     const sessionId = buildSessionId(roleName, workspaceRoot);
     const promptWithId = `SESSION_ID: ${sessionId}\n\n${rolePrompt}`;
-    const escaped = escapePrompt(promptWithId);
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const terminal = vscode.window.createTerminal({
-        name: `[${roleName}] ${timestamp}`,
+    const handle = server.createSession(sessionId, roleName);
+    const args = [
+        '--print',
+        '--sdk-url', handle.wsUrl,
+        '--session-id', sessionId,
+        '--replay-user-messages',
+        '--append-system-prompt', promptWithId,
+    ];
+    handle.outputChannel.appendLine(`[Co-Dev] Starting ${roleName} (session: ${sessionId})\n`);
+    const child = (0, child_process_1.spawn)(claudeCmd, args, {
         cwd: workspaceRoot,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        env: { ...process.env },
     });
-    terminal.show(false);
-    terminal.sendText(`${claudeCmd} --append-system-prompt "${escaped}"`);
+    // stdout/stderr: WS 연결 전 초기 로그 또는 오류 캡처
+    child.stdout?.on('data', (chunk) => {
+        handle.outputChannel.append(chunk.toString());
+    });
+    child.stderr?.on('data', (chunk) => {
+        handle.outputChannel.append('[stderr] ' + chunk.toString());
+    });
+    child.on('close', (code) => {
+        handle.outputChannel.appendLine(`\n[Process exited: ${code}]`);
+    });
+    child.on('error', (err) => {
+        handle.outputChannel.appendLine(`[Spawn error] ${err.message}`);
+        vscode.window.showErrorMessage(`Co-Dev: claude 프로세스 시작 실패 — ${err.message}`);
+    });
+    return handle;
 }
 //# sourceMappingURL=sessionLauncher.js.map

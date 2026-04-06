@@ -1,20 +1,26 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 import * as fs from 'fs';
+import * as path from 'path';
 import { parseRoles, Role } from './roleParser';
 import { getRoleGuideRelativePath, getDefaultRoles } from './config';
 import { launchSession } from './sessionLauncher';
+import { DirectConnectServer } from './directConnectServer';
+import { SessionPanel } from './sessionPanel';
 
-// ─── helpers ────────────────────────────────────────────────────────────────
+// ─── Module-level state ───────────────────────────────────────────────────────
+
+let server: DirectConnectServer;
+let statusBarItem: vscode.StatusBarItem;
+
+/** 이미 Begin session. 을 보낸 세션 — 재연결 시 중복 전송 방지 */
+const initializedSessions = new Set<string>();
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getWorkspaceRoot(): string | undefined {
   return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
 }
 
-/**
- * workspace의 ROLE-GUIDE.md를 읽어 파싱한다.
- * 파일이 없거나 파싱 결과가 비어있으면 settings fallback을 사용한다.
- */
 function resolveRoles(): Role[] {
   const root = getWorkspaceRoot();
   if (root) {
@@ -27,17 +33,51 @@ function resolveRoles(): Role[] {
           return parsed;
         }
       } catch {
-        // 파일 읽기 실패 → fallback
+        // fallback
       }
     }
   }
   return getDefaultRoles();
 }
 
-/**
- * 역할 이름으로 Role을 찾아 세션을 시작한다.
- * 역할이 없으면 오류 메시지를 표시한다.
- */
+function updateStatusBar(): void {
+  const sessions = server.getSessions();
+  const active = sessions.filter(s => s.status === 'active').length;
+  const total = sessions.length;
+
+  if (total === 0) {
+    statusBarItem.text = '$(circle-outline) Co-Dev';
+    statusBarItem.tooltip = 'Co-Dev: 실행 중인 세션 없음';
+  } else {
+    statusBarItem.text = `$(zap) Co-Dev: ${active}/${total}`;
+    statusBarItem.tooltip = sessions
+      .map(s => `${s.roleName} [${s.status}]`)
+      .join('\n');
+  }
+}
+
+function autoSpawnEvaluator(): void {
+  const roles = resolveRoles();
+  const evalRole = roles.find(r => r.name.toLowerCase().includes('eval'));
+  if (!evalRole) {
+    return; // Evaluator 역할 없으면 무시
+  }
+
+  // 이미 active/pending 상태의 Evaluator 세션이 있으면 중복 스폰 방지
+  const alreadyRunning = server.getSessions().some(
+    s => s.roleName.toLowerCase().includes('eval') && s.status !== 'done'
+  );
+  if (alreadyRunning) {
+    return;
+  }
+
+  const root = getWorkspaceRoot() ?? process.cwd();
+  vscode.window.showInformationMessage(
+    'Co-Dev: Developer 세션 완료 — Evaluator 세션을 자동으로 시작합니다.'
+  );
+  launchSession(evalRole.name, evalRole.prompt, root, server);
+}
+
 function launchRoleByName(roleName: string): void {
   const root = getWorkspaceRoot() ?? process.cwd();
   const roles = resolveRoles();
@@ -50,12 +90,11 @@ function launchRoleByName(roleName: string): void {
     return;
   }
 
-  launchSession(role.name, role.prompt, root);
+  launchSession(role.name, role.prompt, root, server);
 }
 
-// ─── commands ───────────────────────────────────────────────────────────────
+// ─── Commands ─────────────────────────────────────────────────────────────────
 
-/** Ctrl+Shift+P → "Co-Dev: New Session" — Quick Pick으로 역할 선택 */
 async function cmdNewSession(): Promise<void> {
   const roles = resolveRoles();
 
@@ -82,29 +121,62 @@ async function cmdNewSession(): Promise<void> {
   }
 
   const root = getWorkspaceRoot() ?? process.cwd();
-  launchSession(selected.role.name, selected.role.prompt, root);
+  launchSession(selected.role.name, selected.role.prompt, root, server);
 }
 
-/** "Co-Dev: New Developer Session" — Developer 직접 실행 */
 function cmdNewDeveloperSession(): void {
   launchRoleByName('Developer');
 }
 
-/** "Co-Dev: New Evaluator Session" — Evaluator 직접 실행 */
 function cmdNewEvaluatorSession(): void {
   launchRoleByName('Evaluator');
 }
 
-// ─── activate / deactivate ───────────────────────────────────────────────────
+function cmdShowPanel(context: vscode.ExtensionContext): void {
+  SessionPanel.show(server, context);
+}
+
+// ─── Activate / Deactivate ────────────────────────────────────────────────────
 
 export function activate(context: vscode.ExtensionContext): void {
+  server = new DirectConnectServer();
+
+  // 상태바는 server 이벤트로 단일 갱신
+  server.on('session:created', () => updateStatusBar());
+  server.on('session:status', (sessionId, status) => {
+    updateStatusBar();
+    if (status === 'active' && !initializedSessions.has(sessionId)) {
+      // 최초 연결 시에만 Begin session. 전송 — 매 턴 후 재연결 시 재전송 방지
+      initializedSessions.add(sessionId);
+      server.sendToSession(sessionId, {
+        type: 'user',
+        message: { role: 'user', content: [{ type: 'text', text: 'Begin session.' }] },
+      });
+    }
+    // done은 WS close 시 발생 — 매 턴 후 재연결 사이클에서도 발생하므로
+    // autoSpawnEvaluator는 여기서 호출하지 않음 (수동 트리거 방식으로 변경)
+  });
+
+  server.start().then((port) => {
+    console.log(`[Co-Dev] DirectConnect server listening on port ${port}`);
+  }).catch((err: Error) => {
+    vscode.window.showErrorMessage(`Co-Dev: 서버 시작 실패 — ${err.message}`);
+  });
+
+  statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 10);
+  statusBarItem.command = 'co-dev.showPanel';
+  updateStatusBar();
+  statusBarItem.show();
+
   context.subscriptions.push(
+    statusBarItem,
     vscode.commands.registerCommand('co-dev.newSession', cmdNewSession),
     vscode.commands.registerCommand('co-dev.newDeveloperSession', cmdNewDeveloperSession),
     vscode.commands.registerCommand('co-dev.newEvaluatorSession', cmdNewEvaluatorSession),
+    vscode.commands.registerCommand('co-dev.showPanel', () => cmdShowPanel(context)),
   );
 }
 
 export function deactivate(): void {
-  // nothing
+  server?.stop();
 }

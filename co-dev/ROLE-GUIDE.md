@@ -22,6 +22,9 @@ Run these MCP calls in order at session start:
 1. `codev_get_context(session_id)` — load prior session state
    - If session not found, call `codev_save_context(...)` to initialize it
 2. `codev_read_checkpoint(session_id)` — restore last checkpoint (pending tasks, open issues)
+3. `codev_read_checkpoint({project}-eval-{YYYYMMDD})` — read latest evaluator feedback
+   - If not found: ignore and proceed
+   - If found: review `next_session_goal` and `open_issues` before starting work
 
 ### Session Context Fields
 
@@ -73,9 +76,9 @@ Use this exact value consistently for every MCP call in this session.
 
 Run these MCP calls in order at session start:
 
-1. `codev_list_sessions()` — see all active sessions
-2. `codev_get_context(session_id)` — load this session's context
-   - If not found, call `codev_save_context(...)` to initialize
+1. `codev_get_context(session_id)` — load this session's context
+   - **Always call `codev_save_context(...)` to initialize or update** (required for Developer to discover this session via `codev_list_sessions`)
+2. `codev_list_sessions()` — see all active sessions
 3. `codev_read_checkpoint(session_id)` — load what the Developer last completed
 
 ### Primary Mission
