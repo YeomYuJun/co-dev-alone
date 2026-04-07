@@ -17,7 +17,7 @@ Sessions communicate through a file-based inbox. Neither role can see the other'
 |-----------|------|---------|
 | **MCP Server** | `src/` | Core session state, checkpoints, inbox — works with any Claude client |
 | **VS Code Extension** | `extension/` | One-command session launcher inside VS Code terminal |
-| **Claude Desktop Plugin** | `plugin/` | `/start`, `/checkpoint`, `/phase` slash commands for Claude Desktop |
+| **Claude Desktop Plugin** | `plugin/` | `/init`, `/start`, `/checkpoint`, `/phase` slash commands for Claude Desktop |
 
 ## MCP Server
 
@@ -42,11 +42,16 @@ Add to `%APPDATA%\Claude\claude_desktop_config.json` (Windows) or `~/Library/App
   "mcpServers": {
     "co-dev": {
       "command": "node",
-      "args": ["/absolute/path/to/co-dev-alone/dist/index.js"]
+      "args": ["/absolute/path/to/co-dev-alone/dist/index.js"],
+      "env": {
+        "CODEV_DATA_DIR": "/absolute/path/to/your-project/co-dev/.data"
+      }
     }
   }
 }
 ```
+
+> Set `CODEV_DATA_DIR` to the `co-dev/.data` path of the project you are working on. If omitted, the server falls back to `~/.co-dev/` as a global store.
 
 ### Register (Claude Code CLI)
 
@@ -143,4 +148,4 @@ co-dev/.data/           — runtime store (.gitignored)
 
 **CLI mode** — Claude Code CLI runs inside the project directory, so tier 2 resolves automatically. `codev_init` also writes `CODEV_DATA_DIR` into `.claude/settings.json` for explicit tier-1 resolution.
 
-**Desktop mode** — Claude Desktop uses a single global MCP process without per-project env injection. Tier 3 (`~/.co-dev/`) is used. Sessions are namespaced by `session_id`, so multiple projects can coexist in the global store.
+**Desktop mode** — Set `CODEV_DATA_DIR` in `claude_desktop_config.json` (see [Register (Claude Desktop)](#register-claude-desktop)) to point at the project's `co-dev/.data`. Without it, the server falls back to tier 3 (`~/.co-dev/`), which is a shared global store across all projects.

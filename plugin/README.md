@@ -36,11 +36,16 @@ Add to `claude_desktop_config.json`:
   "mcpServers": {
     "co-dev": {
       "command": "node",
-      "args": ["C:/absolute/path/to/co-dev-alone/dist/index.js"]
+      "args": ["C:/absolute/path/to/co-dev-alone/dist/index.js"],
+      "env": {
+        "CODEV_DATA_DIR": "C:/absolute/path/to/your-project/co-dev/.data"
+      }
     }
   }
 }
 ```
+
+> Set `CODEV_DATA_DIR` to the `co-dev/.data` path of the project you are working on. If omitted, the server falls back to `~/.co-dev/` as a global store.
 
 ### 3. Install the plugin
 
@@ -84,7 +89,7 @@ At the end of a session:
 /checkpoint eval
 ```
 
-Drafts a `[CHECKPOINT]` from the conversation, asks for confirmation, then calls `codev_save_checkpoint`. If session work is complete, also calls `codev_mark_done` to leave a handoff message for the other role.
+Drafts a `[CHECKPOINT]` from the conversation, asks for confirmation, then calls `codev_save_checkpoint`. Always calls `codev_mark_done` at the end to leave a handoff message for the other role.
 
 ### Manage phases
 
