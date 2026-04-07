@@ -1,11 +1,10 @@
 import { ROLES } from "./constants.js";
 
 /** CO-DEV session role union type */
-export type Role = (typeof ROLES)[keyof typeof ROLES]; // "Dev" | "Eval"
+export type Role = (typeof ROLES)[keyof typeof ROLES]; // "developer" | "evaluator"
 
 /**
  * CONTEXT block — provided at the start of each session.
- * Maps 1:1 to the [CONTEXT] template in CO-DEV-GUIDE Section 1.1.
  */
 export interface SessionContext {
   session_id: string;
@@ -21,12 +20,11 @@ export interface SessionContext {
 
 /**
  * CHECKPOINT block — written when /checkpoint is called.
- * Maps 1:1 to the [CHECKPOINT] output template in CO-DEV-GUIDE Section 1.2.
  */
 export interface Checkpoint {
-  checkpoint_id: string;     // "<session_id>-<index>" e.g. "proj-alpha-3"
+  checkpoint_id: string;     // "<session_id>-<index>"
   session_id: string;
-  index: number;             // auto-incremented per session
+  index: number;
   completed: string[];
   pending: string[];
   next_session_goal: string[];
@@ -60,4 +58,21 @@ export interface PaginatedList<T> {
   items: T[];
   has_more: boolean;
   next_offset?: number;
+}
+
+/**
+ * Inbox message — written by one session role, read by the other.
+ * Empty/consumed state: { read: true }
+ */
+export interface InboxMessage {
+  from: Role;
+  session_id: string;
+  summary: string;
+  written_at: string;
+  read: boolean;
+}
+
+/** Empty inbox sentinel */
+export interface InboxEmpty {
+  read: true;
 }

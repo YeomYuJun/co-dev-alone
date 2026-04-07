@@ -1,4 +1,11 @@
 /dist/
 /node_modules/
-/.cluade/
-/vscode-for-co-dev-launcher/node_modules/
+co-dev/.data/
+temp/
+
+# extension
+/extension/node_modules/
+/extension/out/
+
+# test
+test-e2e.mjs

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "co-dev": {
+      "env": {
+        "CODEV_DATA_DIR": "D:/co-dev-alone/co-dev/.data"
+      }
+    }
+  }
+}

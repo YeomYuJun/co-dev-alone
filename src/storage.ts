@@ -4,27 +4,55 @@
  * Directory layout:
  *   $CODEV_DATA_DIR/
  *     sessions/
- *       {session_id}.json          <- SessionContext
+ *       {session_id}.json
  *     checkpoints/
  *       {session_id}/
- *         {index:04d}.json         <- Checkpoint
+ *         {index:04d}.json
+ *     inbox/
+ *       developer.json
+ *       evaluator.json
  */
 
-import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, writeFileSync } from "fs";
+import {
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "fs";
 import { join } from "path";
-import { CHECKPOINTS_DIR, SESSIONS_DIR } from "./constants.js";
-import type { Checkpoint, CheckpointMeta, SessionContext } from "./types.js";
+import { getCheckpointsDir, getInboxDir, getSessionsDir } from "./constants.js";
+import type { Checkpoint, CheckpointMeta, InboxEmpty, InboxMessage, SessionContext } from "./types.js";
+import type { Role } from "./types.js";
+
+// ─── Directory helpers ────────────────────────────────────────────────────────
 
 export function ensureDirectories(): void {
-  for (const dir of [SESSIONS_DIR, CHECKPOINTS_DIR]) {
+  const sessionsDir = getSessionsDir();
+  const checkpointsDir = getCheckpointsDir();
+  const inboxDir = getInboxDir();
+
+  for (const dir of [sessionsDir, checkpointsDir, inboxDir]) {
     if (!existsSync(dir)) {
       mkdirSync(dir, { recursive: true });
     }
   }
+
+  // Ensure inbox sentinel files exist
+  for (const role of ["developer", "evaluator"] as const) {
+    const p = join(inboxDir, `${role}.json`);
+    if (!existsSync(p)) {
+      writeFileSync(p, JSON.stringify({ read: true }, null, 2), "utf8");
+    }
+  }
 }
 
+// ─── Session Context ──────────────────────────────────────────────────────────
+
 function sessionPath(session_id: string): string {
-  return join(SESSIONS_DIR, `${session_id}.json`);
+  return join(getSessionsDir(), `${session_id}.json`);
 }
 
 export function saveSessionContext(ctx: SessionContext): void {
@@ -40,14 +68,16 @@ export function loadSessionContext(session_id: string): SessionContext | null {
 
 export function listSessionIds(): string[] {
   ensureDirectories();
-  return readdirSync(SESSIONS_DIR)
+  return readdirSync(getSessionsDir())
     .filter((f) => f.endsWith(".json"))
     .map((f) => f.slice(0, -5))
     .sort();
 }
 
+// ─── Checkpoints ──────────────────────────────────────────────────────────────
+
 function checkpointDir(session_id: string): string {
-  return join(CHECKPOINTS_DIR, session_id);
+  return join(getCheckpointsDir(), session_id);
 }
 
 function checkpointPath(session_id: string, index: number): string {
@@ -55,32 +85,24 @@ function checkpointPath(session_id: string, index: number): string {
   return join(checkpointDir(session_id), `${idx}.json`);
 }
 
-/**
- * Atomically claims the next checkpoint index using O_EXCL (exclusive create).
- * If two sessions race, one will get EEXIST and retry with the next index.
- * Returns the final Checkpoint with the claimed index and checkpoint_id.
- */
 export function saveCheckpoint(cp: Omit<Checkpoint, "index" | "checkpoint_id">): Checkpoint {
   ensureDirectories();
   const dir = checkpointDir(cp.session_id);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 
-  // Start from current file count + 1; retry on collision (EEXIST).
-  const existing = existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith(".json")).length : 0;
+  const existing = readdirSync(dir).filter((f) => f.endsWith(".json")).length;
   let index = existing + 1;
   const MAX_RETRIES = 20;
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++, index++) {
     const p = checkpointPath(cp.session_id, index);
     try {
-      // wx = O_WRONLY | O_CREAT | O_EXCL — fails if file already exists
       const fd = openSync(p, "wx");
       closeSync(fd);
     } catch (err: unknown) {
       if ((err as NodeJS.ErrnoException).code === "EEXIST") { continue; }
       throw err;
     }
-    // File created exclusively — write the full checkpoint
     const final: Checkpoint = {
       ...cp,
       index,
@@ -90,7 +112,7 @@ export function saveCheckpoint(cp: Omit<Checkpoint, "index" | "checkpoint_id">):
     return final;
   }
 
-  throw new Error(`saveCheckpoint: could not claim a free index after ${MAX_RETRIES} retries for session '${cp.session_id}'`);
+  throw new Error(`saveCheckpoint: could not claim a free index after ${MAX_RETRIES} retries`);
 }
 
 export function loadCheckpoint(session_id: string, index: number): Checkpoint | null {
@@ -114,11 +136,10 @@ export function listCheckpointMetas(
   limit: number
 ): { total: number; items: CheckpointMeta[] } {
   ensureDirectories();
+  const checkpointsDir = getCheckpointsDir();
   const sessionIds: string[] = session_id
     ? [session_id]
-    : readdirSync(CHECKPOINTS_DIR).filter((d) =>
-        existsSync(join(CHECKPOINTS_DIR, d))
-      );
+    : readdirSync(checkpointsDir).filter((d) => existsSync(join(checkpointsDir, d)));
 
   const allMetas: CheckpointMeta[] = [];
 
@@ -144,4 +165,28 @@ export function listCheckpointMetas(
   );
 
   return { total: allMetas.length, items: allMetas.slice(offset, offset + limit) };
+}
+
+// ─── Inbox ────────────────────────────────────────────────────────────────────
+
+function inboxPath(role: Role): string {
+  return join(getInboxDir(), `${role}.json`);
+}
+
+export function readInbox(role: Role): InboxMessage | InboxEmpty {
+  ensureDirectories();
+  const p = inboxPath(role);
+  if (!existsSync(p)) return { read: true };
+  return JSON.parse(readFileSync(p, "utf8")) as InboxMessage | InboxEmpty;
+}
+
+export function markInboxRead(role: Role): void {
+  const p = inboxPath(role);
+  writeFileSync(p, JSON.stringify({ read: true }, null, 2), "utf8");
+}
+
+export function writeInbox(targetRole: Role, message: Omit<InboxMessage, "read">): void {
+  ensureDirectories();
+  const full: InboxMessage = { ...message, read: false };
+  writeFileSync(inboxPath(targetRole), JSON.stringify(full, null, 2), "utf8");
 }
