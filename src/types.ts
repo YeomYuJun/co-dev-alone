@@ -68,6 +68,7 @@ export interface InboxMessage {
   from: Role;
   session_id: string;
   summary: string;
+  action_required: string;
   written_at: string;
   read: boolean;
 }

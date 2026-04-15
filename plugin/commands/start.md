@@ -48,7 +48,12 @@ Do NOT ask the user for session_id.
 
 Call `codev_check_inbox(role: <developer|evaluator>)`.
 
+The `role` parameter is YOUR role — it reads YOUR OWN inbox, not the other role's.
+- Developer session: `codev_check_inbox('developer')`
+- Evaluator session: `codev_check_inbox('evaluator')`
+
 - If a message is found: display it prominently under **📬 Inbox from [other role]:**
+  - If the message includes ⚠️ ACTION REQUIRED, display it with emphasis
 - If empty: proceed silently
 
 ## Step 4 — Load or initialize context (Session Protocol Step 2a)
@@ -131,10 +136,19 @@ Phase    : {phase}
 {Evaluator only — EVAL-CRITERIA.md section here}
 
 Ready. Use [PLAN] prefix to start, /checkpoint when done.
+When finished: call codev_mark_done to hand off to the other role.
+```
+
+**Developer role reminder** (add after the separator):
+```
+⚠️ You are a DEVELOPER. Do NOT evaluate or review code quality.
+   Only check YOUR inbox: codev_check_inbox('developer').
 ```
 
 **Evaluator role reminder** (add after the separator):
 ```
-Reminder: Evaluate based on output and behavior only.
-Do NOT reference the Developer's implementation decisions.
+⚠️ You are an EVALUATOR. Do NOT write code or implement features.
+   Only check YOUR inbox: codev_check_inbox('evaluator').
+   Evaluate based on output and behavior only.
+   Do NOT reference the Developer's implementation decisions.
 ```

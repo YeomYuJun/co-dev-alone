@@ -1,16 +1,19 @@
 ---
-description: Save a CO-DEV checkpoint and update project state files
+description: Save a CO-DEV checkpoint (lightweight — no CHANGELOG/state update)
 allowed-tools:
   - Bash
   - Read
-  - Edit
   - mcp__co-dev__codev_save_checkpoint
   - mcp__co-dev__codev_get_context
-  - mcp__co-dev__codev_mark_done
 argument-hint: [dev|eval]
 ---
 
-Save a [CHECKPOINT] and synchronize all git-tracked state files. Follow these steps exactly.
+Save a [CHECKPOINT] to MCP storage. This is a **lightweight** operation:
+- Saves checkpoint data only
+- Does NOT update CHANGELOG.md or state files (use `codev_finalize` after eval PASS)
+- Does NOT write to inbox (use `codev_mark_done` separately if handing off)
+
+Follow these steps exactly.
 
 ## Step 1 — Resolve session_id and role
 
@@ -72,98 +75,12 @@ Call `codev_save_checkpoint`:
 
 Capture the returned `checkpoint_id` and `created_at` timestamp.
 
-## Step 6 — Update CHANGELOG.md
-
-Read `co-dev/communication/CHANGELOG.md`, then append the following block at the end:
-
-```
-## [{checkpoint_id}] — {created_at}
-**Role**: {Developer | Evaluator}
-**Phase**: {current phase from context}
-
-### Completed
-{completed items as bullet list}
-
-### Pending
-{pending items as bullet list, or "(none)"}
-
-### Open Issues
-{open_issues as bullet list, or "(none)"}
-
----
-```
-
-## Step 7 — Update state snapshot
-
-**For Developer role** — overwrite `co-dev/communication/dev-state.md` with:
-```
-# Developer 상태 스냅샷
-
-> 최신 Developer 세션 상태를 기록합니다. 세션 종료 시 업데이트.
-
----
-
-**세션 ID**: {session_id}
-**마지막 업데이트**: {created_at}
-**현재 TASK**: {phase}
-
-## 완료한 작업
-
-{completed items as bullet list}
-
-## 진행 중인 작업
-
-{pending items as bullet list, or "-"}
-
-## 다음 세션 목표
-
-{next_session_goal as bullet list}
-
-## 미해결 이슈
-
-{open_issues as bullet list, or "-"}
-```
-
-**For Evaluator role** — overwrite `co-dev/communication/eval-state.md` with:
-```
-# Evaluator 상태 스냅샷
-
-> 최신 Evaluator 평가 결과를 기록합니다. 평가 완료 시 업데이트.
-
----
-
-**세션 ID**: {session_id}
-**마지막 업데이트**: {created_at}
-**평가 대상 TASK**: {phase}
-**평가 결과**: {PASS / PARTIAL / FAIL — infer from completed/open_issues}
-
-## 평가 요약
-
-{summary from completed items}
-
-## 구체적 피드백
-
-{open_issues as bullet list, or "-"}
-
-## 다음 Developer에게 전달할 사항
-
-{next_session_goal as bullet list}
-```
-
-## Step 8 — Signal handoff via inbox
-
-Call `codev_mark_done`:
-- `role`: `developer` or `evaluator`
-- `session_id`: derived value
-- `summary`: one-paragraph summary of what was accomplished and what the other role should do next
-
-## Step 9 — Display confirmation
+## Step 6 — Display confirmation
 
 ```
 ✅ Checkpoint saved: {checkpoint_id}
-   CHANGELOG.md updated
-   {dev-state.md | eval-state.md} updated
-   📬 Inbox written for [{evaluator | developer}]
 
-The other role will see this on next /start.
+Next steps:
+  - To hand off to the other role: call codev_mark_done(role, session_id, summary, action_required)
+  - To finalize (after eval ALL PASS): call codev_finalize(...)
 ```

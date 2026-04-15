@@ -7,7 +7,7 @@ description: >
   prefixes like "[PLAN]", "[IMPL]", "[ISSUE]", "[CHECKPOINT]", "[DONE]", or
   "[QUESTION]", or asks which phase they are in. Load this skill before using
   any /init, /start, /checkpoint, or /phase command.
-version: 0.2.0
+version: 0.3.0
 ---
 
 # CO-DEV Conventions
@@ -52,13 +52,16 @@ Evaluator must NOT have seen the Developer's implementation choices during the s
 ## Official Session Protocol (README)
 
 ```
-1. codev_check_inbox(role)           ← always first
-2. Read co-dev/TASK.md               ← check current sprint tasks
+1. codev_check_inbox(role)                          ← always first (YOUR role)
+2. Read co-dev/TASK.md                              ← check current sprint tasks
 3. Do the work
-4. codev_mark_done(role, session_id, summary)  ← always last
+4. codev_mark_done(role, session_id, summary,       ← always last (inbox only)
+                   action_required)
+5. [After eval ALL PASS] codev_finalize(...)        ← CHANGELOG + state.md 확정
 ```
 
-Steps 2 and 4 involve the git-tracked markdown layer, NOT just the MCP `.data/` layer. Both must stay in sync.
+- `mark_done` = inbox write only. CHANGELOG/state는 건드리지 않음.
+- `codev_finalize` = eval ALL PASS 확정 후에만 사용. CHANGELOG.md, state.md 갱신.
 
 ## Response Prefix Rules
 
@@ -97,7 +100,7 @@ See `references/phase-gates.md` for full conditions. Summary:
 | `/init` | Once, on a brand-new project — creates co-dev/ structure |
 | `/start dev` | Beginning every Developer session |
 | `/start eval` | Beginning every Evaluator session |
-| `/checkpoint` | End of every session — saves to MCP + updates markdown |
+| `/checkpoint` | Save checkpoint to MCP storage (lightweight — no markdown updates) |
 | `/phase` | Check exit conditions; `/phase advance` to move to next phase |
 
 ## MCP Tool Reference
@@ -111,6 +114,7 @@ See `references/phase-gates.md` for full conditions. Summary:
 | `codev_save_checkpoint` | Persist [CHECKPOINT] block (auto-increment index) |
 | `codev_read_checkpoint` | Read latest or specific checkpoint |
 | `codev_list_checkpoints` | Paginated checkpoint metadata |
-| `codev_check_inbox` | Read handoff message from other role (marks as read) |
-| `codev_mark_done` | Write handoff message to other role's inbox |
+| `codev_check_inbox` | Read YOUR inbox (marks as read). Role param = YOUR role. |
+| `codev_mark_done` | Write to other role's inbox (inbox only, no CHANGELOG/state) |
+| `codev_finalize` | Commit confirmed results to CHANGELOG.md + state.md (after eval PASS) |
 | `codev_detect_role` | Keyword-score text to infer Dev vs Eval role |

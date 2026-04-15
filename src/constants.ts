@@ -65,6 +65,16 @@ export function resolveDataDir(): string {
   return homePath;
 }
 
+/**
+ * Resolve the git-tracked co-dev/ communication directory.
+ * Derived from dataDir by removing the trailing `.data` segment.
+ */
+export function getCommunicationDir(): string {
+  const dataDir = resolveDataDir();
+  // dataDir = .../co-dev/.data  →  .../co-dev/communication
+  return join(dataDir, "..", "communication");
+}
+
 /** Derive sub-directories from resolved data dir */
 export function getSessionsDir(): string {
   return join(resolveDataDir(), "sessions");

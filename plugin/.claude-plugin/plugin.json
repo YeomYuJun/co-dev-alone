@@ -1,6 +1,6 @@
 {
   "name": "co-dev",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "CO-DEV workflow plugin: role injection, context loading, and checkpoint management for multi-session Claude development",
   "author": {
     "name": "yujun"
