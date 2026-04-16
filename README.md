@@ -142,10 +142,10 @@ co-dev/.data/           — runtime store (.gitignored)
 
 | Priority | Condition | Path used |
 |----------|-----------|-----------|
-| 1 | `CODEV_DATA_DIR` env var set | value of env var |
-| 2 | `{cwd}/co-dev/.data/` exists | project-local (CLI mode) |
+| 1 | `{cwd}/co-dev/.data/` exists | project-local (CLI mode) |
+| 2 | `CODEV_DATA_DIR` env var set | value of env var |
 | 3 | fallback | `~/.co-dev/` global (Desktop mode) |
 
-**CLI mode** — Claude Code CLI runs inside the project directory, so tier 2 resolves automatically. `codev_init` also writes `CODEV_DATA_DIR` into `.claude/settings.json` for explicit tier-1 resolution.
+**CLI mode** — Claude Code CLI runs from the project root, so tier 1 resolves automatically and always wins over any inherited `CODEV_DATA_DIR`. This keeps each project's inbox/checkpoints isolated even when the user-scope CLI config sets a global path.
 
-**Desktop mode** — Set `CODEV_DATA_DIR` in `claude_desktop_config.json` (see [Register (Claude Desktop)](#register-claude-desktop)) to point at the project's `co-dev/.data`. Without it, the server falls back to tier 3 (`~/.co-dev/`), which is a shared global store across all projects.
+**Desktop mode** — Claude Desktop has no project-bound cwd, so tier 1 never matches. Set `CODEV_DATA_DIR` in `claude_desktop_config.json` (see [Register (Claude Desktop)](#register-claude-desktop)) to pin Desktop to a specific store, or let it fall through to tier 3 (`~/.co-dev/`), a shared global store across all projects.

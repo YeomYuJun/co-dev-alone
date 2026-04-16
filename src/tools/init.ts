@@ -119,34 +119,32 @@ Safe to re-run — existing files are not overwritten.`,
     }
 
     // ── 3. .claude/settings.json ─────────────────────────────────────────────
+    //
+    // Record CODEV_DATA_DIR as documentation of intent.
+    // Note: Claude Code CLI registers MCP servers via ~/.claude.json (user scope)
+    // or .mcp.json (project scope), NOT via .claude/settings.json. So this env is
+    // not what actually drives per-project isolation — that's handled by the
+    // cwd-first resolveDataDir() logic (see src/constants.ts). This file stays
+    // for human readability and future compatibility.
     const settingsPath = join(cwd, ".claude", "settings.json");
-    const settingsContent = JSON.stringify(
-      {
-        mcpServers: {
-          "co-dev": {
-            env: {
-              CODEV_DATA_DIR: dataDir.replace(/\\/g, "/"),
-            },
-          },
-        },
-      },
-      null,
-      2
-    );
+    const codevMcpEnv = {
+      env: { CODEV_DATA_DIR: dataDir.replace(/\\/g, "/") },
+    };
 
     if (!existsSync(settingsPath)) {
       mkdirSync(dirname(settingsPath), { recursive: true });
-      writeFileSync(settingsPath, settingsContent, "utf8");
+      writeFileSync(
+        settingsPath,
+        JSON.stringify({ mcpServers: { "co-dev": codevMcpEnv } }, null, 2),
+        "utf8"
+      );
       results.push(`  ✓ .claude/settings.json (created)`);
     } else {
-      // Merge CODEV_DATA_DIR into existing settings
       try {
         const existing = JSON.parse(readFileSync(settingsPath, "utf8")) as Record<string, unknown>;
         const mcpServers = (existing["mcpServers"] as Record<string, unknown> | undefined) ?? {};
         const codevServer = (mcpServers["co-dev"] as Record<string, unknown> | undefined) ?? {};
-        const env = (codevServer["env"] as Record<string, string> | undefined) ?? {};
-        env["CODEV_DATA_DIR"] = dataDir.replace(/\\/g, "/");
-        codevServer["env"] = env;
+        codevServer["env"] = codevMcpEnv.env;
         mcpServers["co-dev"] = codevServer;
         existing["mcpServers"] = mcpServers;
         writeFileSync(settingsPath, JSON.stringify(existing, null, 2), "utf8");

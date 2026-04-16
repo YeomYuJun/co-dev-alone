@@ -36,30 +36,34 @@ export const DEV_KEYWORDS: readonly string[] = [
 ];
 
 /**
- * Resolve the CO-DEV data directory using 4-tier priority:
- *   1. CODEV_DATA_DIR environment variable (explicit override, used by codev_init via .claude/settings.json)
- *   2. {cwd}/co-dev/.data/ if it exists (CLI per-project mode)
- *   3. ~/.co-dev/ global fallback (Claude Desktop mode — single global MCP process)
+ * Resolve the CO-DEV data directory with a cwd-first priority.
  *
- * Tier 3 makes Desktop behavior intentional: sessions are namespaced by session_id
- * so multiple projects can coexist in the global store. Inbox is shared, which is
- * acceptable for single-project-at-a-time Desktop workflows.
+ *   1. {cwd}/co-dev/.data/ if it exists  → per-project (Claude Code CLI)
+ *   2. CODEV_DATA_DIR env var             → explicit override (Claude Desktop)
+ *   3. ~/.co-dev/                         → global fallback
  *
- * codev_init bypasses this and uses its own path logic.
+ * Why cwd-first:
+ *   Claude Code CLI is always launched from the project root, so a project-local
+ *   co-dev/.data is an unambiguous signal that the user wants per-project state.
+ *   Putting env above it caused cross-project contamination when the Claude Code
+ *   CLI inherited CODEV_DATA_DIR from the user-scope ~/.claude.json Desktop entry.
+ *
+ *   Claude Desktop has no meaningful cwd, so tier 1 never matches and it falls
+ *   through to env (tier 2) or ~/.co-dev (tier 3) as intended.
  */
 export function resolveDataDir(): string {
-  // 1st: explicit env var (set by codev_init via .claude/settings.json or global Desktop config)
-  if (process.env["CODEV_DATA_DIR"]) {
-    return process.env["CODEV_DATA_DIR"];
-  }
-
-  // 2nd: cwd-relative per-project (CLI mode)
+  // 1st: cwd-relative per-project (CLI is always launched from project root)
   const cwdPath = join(process.cwd(), "co-dev", ".data");
   if (existsSync(cwdPath)) {
     return cwdPath;
   }
 
-  // 3rd: global home directory fallback (Claude Desktop mode)
+  // 2nd: explicit env var override (Claude Desktop, or manual override)
+  if (process.env["CODEV_DATA_DIR"]) {
+    return process.env["CODEV_DATA_DIR"];
+  }
+
+  // 3rd: global home directory fallback
   const homePath = join(homedir(), ".co-dev");
   mkdirSync(homePath, { recursive: true });
   return homePath;
