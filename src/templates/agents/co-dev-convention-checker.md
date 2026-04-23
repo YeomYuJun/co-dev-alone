@@ -1,14 +1,6 @@
-<!-- codev-template: v0.4.0 -->
 ---
 name: co-dev-convention-checker
-description: >
-  Use to check whether a file or change-set follows the project's existing
-  conventions (naming, layer boundaries, error handling patterns, import
-  style). The agent DISCOVERS conventions by scanning the codebase first —
-  no configuration needed. Invoke from a Developer session before marking
-  work done, especially when touching shared layers (services, adapters,
-  API handlers). Returns: list of divergences from inferred conventions,
-  or "no divergences found".
+description: Use to check whether a file or change-set follows the project's existing conventions (naming, layer boundaries, error handling patterns, import style). DISCOVERS conventions by scanning the codebase first — no configuration needed. Invoke from a Developer session before marking work done, especially when touching shared layers (services, adapters, API handlers). Returns list of divergences from inferred conventions, or "no divergences found".
 tools: Glob, Grep, Read
 ---
 

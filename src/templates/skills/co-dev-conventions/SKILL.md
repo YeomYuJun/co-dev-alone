@@ -1,12 +1,6 @@
 ---
 name: co-dev-conventions
-description: >
-  Always-on CO-DEV conventions: data layout, response prefix rules, communication
-  rules, and index of other co-dev-* skills. Load this skill whenever the user
-  mentions CO-DEV, dev session, eval session, checkpoint, or uses response
-  prefixes like [PLAN], [IMPL], [ISSUE], [DONE], [QUESTION], [CHECKPOINT].
-  This is the *reference* skill — for procedural rituals see co-dev-resume,
-  co-dev-handoff, co-dev-phase.
+description: Always-on CO-DEV conventions — data layout, response prefix rules, communication rules, and index of other co-dev-* skills. Load whenever the user mentions CO-DEV, dev session, eval session, checkpoint, or uses response prefixes like [PLAN], [IMPL], [ISSUE], [DONE], [QUESTION], [CHECKPOINT]. This is the reference skill; procedural rituals live in co-dev-resume, co-dev-handoff, co-dev-phase.
 version: 0.4.0
 ---
 

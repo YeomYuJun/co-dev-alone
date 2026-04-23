@@ -1,13 +1,6 @@
-<!-- codev-template: v0.4.0 -->
 ---
 name: co-dev-task-decomposer
-description: >
-  Use from an Evaluator session to break a high-level task into file-grounded
-  sub-tasks at a consistent depth. The agent READS referenced documents and
-  source files first, then produces 3-7 sub-tasks each scoped to 1-3 files
-  with a clear done-condition. Invoke when a new task is added to TASK.md or
-  when a vague goal needs to become executable. Returns markdown ready to
-  paste into TASK.md.
+description: Use from an Evaluator session to break a high-level task into file-grounded sub-tasks at a consistent depth. Reads referenced documents and source files first, then produces 3-7 sub-tasks each scoped to 1-3 files with a clear done-condition. Invoke when a new task is added to TASK.md or when a vague goal needs to become executable. Returns markdown ready to paste into TASK.md.
 tools: Glob, Grep, Read
 ---
 

@@ -1,11 +1,6 @@
 ---
 name: co-dev-resume
-description: >
-  Use at the start of EVERY CO-DEV session to restore context correctly. Triggers
-  when the user opens a Developer or Evaluator session, says "continue", "resume",
-  "where were we", "pick up", "이어서", "재개", or runs /start. Also load this
-  skill before calling any codev_* tool if no prior inbox/context has been read
-  in the current conversation. Must run before implementation or evaluation work.
+description: Use at the start of every CO-DEV session to restore context correctly. Triggers when the user opens a Developer or Evaluator session, says "continue", "resume", "where were we", "pick up", "이어서", "재개", or runs /start. Load before calling any codev_* tool if no prior inbox/context has been read. Must run before implementation or evaluation work.
 version: 0.1.0
 ---
 

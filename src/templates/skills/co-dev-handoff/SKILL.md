@@ -1,11 +1,6 @@
 ---
 name: co-dev-handoff
-description: >
-  Use at the END of EVERY CO-DEV session to hand off cleanly to the other role.
-  Triggers when the user says "end session", "wrap up", "finish", "checkpoint",
-  "hand off", "종료", "마무리", "핸드오프", or when a unit of work is complete
-  and ready for evaluation/review. Also triggers on /checkpoint command. Must
-  run before the session closes or the other role will be left stranded.
+description: Use at the END of every CO-DEV session to hand off cleanly to the other role. Triggers when the user says "end session", "wrap up", "finish", "checkpoint", "hand off", "종료", "마무리", "핸드오프", or when a unit of work is complete and ready for evaluation/review. Also triggers on /checkpoint. Must run before the session closes or the other role will be stranded.
 version: 0.1.0
 ---
 

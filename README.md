@@ -30,8 +30,21 @@ Sessions communicate through a file-based inbox. Neither role can see the other'
 
 ```bash
 npm install
-npm run build
+npm run build            # TypeScript → dist/ (MCP server)
 ```
+
+#### Available scripts
+
+| Command | What it does |
+|---|---|
+| `npm run build` | Compile TypeScript sources in `src/` to `dist/` |
+| `npm run sync:plugin-skills` | Copy `src/templates/skills/` → `plugin/skills/` (single source of truth) |
+| `npm run bundle:plugin` | `sync:plugin-skills` + create `plugin/co-dev.plugin` ZIP via Node (cross-platform, POSIX paths) |
+| `npm run package` | `build` + `bundle:plugin` — use this before distributing the plugin |
+| `npm run clean` | Remove `dist/` |
+| `npm run dev` | Watch mode (`tsx watch src/index.ts`) |
+
+> `plugin/skills/` is a generated build output (git-ignored). Edit skill sources in `src/templates/skills/` only.
 
 ### Register (Claude Desktop)
 
@@ -79,14 +92,32 @@ codev_init("my-project", tech_stack="TypeScript", scope="...")
 This creates:
 - `co-dev/` — markdown structure (git-tracked)
 - `co-dev/.data/` — session/checkpoint/inbox JSON store (git-ignored)
+- `.claude/agents/co-dev-convention-checker.md` — Dev subagent (dynamic convention discovery)
+- `.claude/agents/co-dev-task-decomposer.md` — Eval subagent (file-grounded task decomposition)
+- `.claude/skills/co-dev-*/` — workflow skills (resume, handoff, phase, conventions) for Claude Code CLI
 - `.claude/settings.json` — injects `CODEV_DATA_DIR` for CLI mode
 - `.gitignore` entry for `co-dev/.data/`
+
+> After running `codev_init`, **restart Claude Code** so newly scaffolded agents and skills are discovered at session start.
+
+### Sync templates (existing projects)
+
+When the MCP bundle ships new/updated agents or skills, pull them into an existing project:
+
+```
+codev_sync(dry_run=true)                            # preview status per file
+codev_sync(dry_run=false, apply_mode="create_missing")  # only write MISSING files (safe)
+codev_sync(dry_run=false, apply_mode="force_all")       # also overwrite DIVERGED (destructive)
+```
+
+File status is classified by SHA-256 comparison: `UP_TO_DATE` · `MISSING` · `DIVERGED` (user-modified or from an older bundle version).
 
 ## MCP Tools
 
 | Tool | Description |
 |------|-------------|
-| `codev_init` | Initialize CO-DEV project structure |
+| `codev_init` | Initialize CO-DEV project structure (co-dev/ + .claude/agents + .claude/skills) |
+| `codev_sync` | Reconcile scaffolded templates with the bundle's current version (MISSING / UP_TO_DATE / DIVERGED) |
 | `codev_save_context` | Save session context |
 | `codev_get_context` | Read saved session context |
 | `codev_list_sessions` | List all session IDs |
@@ -96,6 +127,14 @@ This creates:
 | `codev_detect_role` | Detect Dev / Eval role from context keywords |
 | `codev_check_inbox` | Read inbox message from the other role (marks as read) |
 | `codev_mark_done` | Signal completion and write to the other role's inbox |
+| `codev_finalize` | After Evaluator ALL PASS, commit results to CHANGELOG.md / state.md |
+
+### Subagents (scaffolded by `codev_init`)
+
+| Agent | Invoked from | Purpose |
+|---|---|---|
+| `co-dev-convention-checker` | Developer session | Infers project conventions by scanning the codebase, then checks a file/change-set against them. No user configuration needed. |
+| `co-dev-task-decomposer` | Evaluator session | Reads referenced docs + source, decomposes a high-level task into 3–7 file-grounded sub-tasks at consistent depth. |
 
 ## Session Protocol
 
@@ -136,6 +175,17 @@ co-dev/.data/           — runtime store (.gitignored)
 └── inbox/
     ├── developer.json
     └── evaluator.json
+
+.claude/                — Claude Code CLI configuration (scaffolded by codev_init)
+├── settings.json       — mcpServers.co-dev registration
+├── agents/
+│   ├── co-dev-convention-checker.md
+│   └── co-dev-task-decomposer.md
+└── skills/
+    ├── co-dev-conventions/     — always-on (data layout, prefix rules, index)
+    ├── co-dev-resume/          — session start ritual
+    ├── co-dev-handoff/         — session end ritual
+    └── co-dev-phase/           — phase gate check
 ```
 
 ### Data Directory Resolution

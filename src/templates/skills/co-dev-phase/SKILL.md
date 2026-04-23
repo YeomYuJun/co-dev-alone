@@ -1,11 +1,6 @@
 ---
 name: co-dev-phase
-description: >
-  Use when the user asks about phase status, wants to advance a phase, or runs
-  /phase / /phase advance. Triggers on keywords: "phase", "gate", "exit
-  condition", "advance", "페이즈", "단계", "게이트", or when deciding whether
-  Planning/Implementation/Review/Evaluation work is complete. Load this before
-  declaring a phase done or moving to the next one.
+description: Use when the user asks about phase status, wants to advance a phase, or runs /phase or /phase advance. Triggers on keywords "phase", "gate", "exit condition", "advance", "페이즈", "단계", "게이트", or when deciding whether Planning/Implementation/Review/Evaluation work is complete. Load before declaring a phase done or moving to the next one.
 version: 0.1.0
 ---
 
