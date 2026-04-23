@@ -31,4 +31,36 @@ export const TEMPLATES: readonly TemplateEntry[] = [
     templatePath: "agents/co-dev-task-decomposer.md",
     installPath: ".claude/agents/co-dev-task-decomposer.md",
   },
+  // Skills — loaded by Claude Code CLI from project .claude/skills/
+  // (Claude Desktop uses plugin/skills/ bundle; these are for CLI scope.)
+  {
+    name: "co-dev-conventions (skill)",
+    templatePath: "skills/co-dev-conventions/SKILL.md",
+    installPath: ".claude/skills/co-dev-conventions/SKILL.md",
+  },
+  {
+    name: "co-dev-conventions/phase-gates (reference)",
+    templatePath: "skills/co-dev-conventions/references/phase-gates.md",
+    installPath: ".claude/skills/co-dev-conventions/references/phase-gates.md",
+  },
+  {
+    name: "co-dev-conventions/checkpoint-format (reference)",
+    templatePath: "skills/co-dev-conventions/references/checkpoint-format.md",
+    installPath: ".claude/skills/co-dev-conventions/references/checkpoint-format.md",
+  },
+  {
+    name: "co-dev-resume (skill)",
+    templatePath: "skills/co-dev-resume/SKILL.md",
+    installPath: ".claude/skills/co-dev-resume/SKILL.md",
+  },
+  {
+    name: "co-dev-handoff (skill)",
+    templatePath: "skills/co-dev-handoff/SKILL.md",
+    installPath: ".claude/skills/co-dev-handoff/SKILL.md",
+  },
+  {
+    name: "co-dev-phase (skill)",
+    templatePath: "skills/co-dev-phase/SKILL.md",
+    installPath: ".claude/skills/co-dev-phase/SKILL.md",
+  },
 ];
