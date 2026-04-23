@@ -26,4 +26,9 @@ export const TEMPLATES: readonly TemplateEntry[] = [
     templatePath: "agents/co-dev-convention-checker.md",
     installPath: ".claude/agents/co-dev-convention-checker.md",
   },
+  {
+    name: "co-dev-task-decomposer (agent)",
+    templatePath: "agents/co-dev-task-decomposer.md",
+    installPath: ".claude/agents/co-dev-task-decomposer.md",
+  },
 ];
