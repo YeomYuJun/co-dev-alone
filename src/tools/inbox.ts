@@ -49,7 +49,7 @@ function formatInboxMessage(role: Role, msg: InboxMessage): string {
     lines.push(``, `⚠️ ACTION REQUIRED: ${msg.action_required}`);
   }
 
-  lines.push(``, `[Marked as read]`);
+  lines.push(``, `[Marked as read]`, ``, `→ next: read co-dev/TASK.md, then begin work. Do not skip TASK.md even if the message above seems complete — the sprint goal is there.`);
   return lines.join("\n");
 }
 
@@ -58,7 +58,7 @@ function formatInboxEmpty(role: Role): string {
     `${roleReminder(role)} Checked YOUR inbox (${role}).`,
     `No pending messages.`,
     ``,
-    `Proceed by loading context: codev_get_context(session_id)`,
+    `→ next: codev_get_context(session_id) to restore state, then read co-dev/TASK.md.`,
   ].join("\n");
 }
 
@@ -131,6 +131,10 @@ Returns: Confirmation that inbox was written.`,
       written_at: new Date().toISOString(),
     });
 
+    const finalizeHint = senderRole === ROLES.EVAL
+      ? `If this was an ALL PASS evaluation and the user confirms, call codev_finalize to commit CHANGELOG/state.md.`
+      : `Evaluator session will receive this on next codev_check_inbox('${targetRole}').`;
+
     const text = [
       `${roleReminder(senderRole)} [DONE] Inbox written for '${targetRole}'.`,
       ``,
@@ -138,7 +142,7 @@ Returns: Confirmation that inbox was written.`,
       `Summary: ${params.summary}`,
       `Action required for ${targetRole}: ${params.action_required}`,
       ``,
-      `The ${targetRole} session will receive this on next codev_check_inbox('${targetRole}').`,
+      `→ next: this session's handoff is complete. Emit a [CHECKPOINT] response block if not yet done. ${finalizeHint}`,
     ].join("\n");
 
     return { content: [{ type: "text", text }] };

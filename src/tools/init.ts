@@ -13,6 +13,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
 import { z } from "zod";
+import { TEMPLATES } from "../templates/manifest.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -60,6 +61,7 @@ Creates:
   - co-dev/ markdown files (COLLABO.md, ROLE-GUIDE.md, TASK.md, EVAL-CRITERIA.md, communication/)
   - co-dev/.data/ JSON directories (sessions/, checkpoints/, inbox/)
   - .claude/settings.json with CODEV_DATA_DIR override
+  - .claude/agents/co-dev-convention-checker.md (dynamic-discovery subagent for Dev sessions)
   - .gitignore entry for co-dev/.data/
 
 Args:
@@ -78,19 +80,20 @@ Safe to re-run — existing files are not overwritten.`,
 
     const results: string[] = [];
 
-    // ── 1. Markdown structure ────────────────────────────────────────────────
-    const markdownFiles: Array<[string, string]> = [
-      [join(codevDir, "COLLABO.md"), readTemplate("COLLABO.md")],
-      [join(codevDir, "ROLE-GUIDE.md"), readTemplate("ROLE-GUIDE.md")],
-      [join(codevDir, "TASK.md"), readTemplate("TASK.md")],
-      [join(codevDir, "EVAL-CRITERIA.md"), readTemplate("EVAL-CRITERIA.md")],
+    // ── 1. Manifest-backed templates (co-dev/ + .claude/agents/) ─────────────
+    for (const tpl of TEMPLATES) {
+      const filePath = join(cwd, tpl.installPath);
+      const content = readTemplate(tpl.templatePath);
+      const status = writeIfNotExists(filePath, content);
+      results.push(`  ${status === "created" ? "✓" : "·"} ${filePath.replace(cwd, ".")} (${status})`);
+    }
+
+    // ── 1b. Inline user-authored append-only files (not subject to sync) ─────
+    const inlineFiles: Array<[string, string]> = [
       [join(commDir, "CHANGELOG.md"), `# CHANGELOG\n\n> append-only 변경 이력\n`],
       [join(commDir, "ISSUES.md"), `# ISSUES\n\n> 이슈 추적\n`],
-      [join(commDir, "dev-state.md"), readTemplate("dev-state.md")],
-      [join(commDir, "eval-state.md"), readTemplate("eval-state.md")],
     ];
-
-    for (const [filePath, content] of markdownFiles) {
+    for (const [filePath, content] of inlineFiles) {
       const status = writeIfNotExists(filePath, content);
       results.push(`  ${status === "created" ? "✓" : "·"} ${filePath.replace(cwd, ".")} (${status})`);
     }

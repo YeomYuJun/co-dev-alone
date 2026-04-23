@@ -1,120 +1,96 @@
 ---
 name: co-dev-conventions
 description: >
-  This skill should be used whenever the user mentions "CO-DEV", "dev session",
-  "eval session", "checkpoint", "phase gate", "role detection", or asks about
-  the multi-session development workflow. Also triggers when the user references
-  prefixes like "[PLAN]", "[IMPL]", "[ISSUE]", "[CHECKPOINT]", "[DONE]", or
-  "[QUESTION]", or asks which phase they are in. Load this skill before using
-  any /init, /start, /checkpoint, or /phase command.
-version: 0.3.0
+  Always-on CO-DEV conventions: data layout, response prefix rules, communication
+  rules, and index of other co-dev-* skills. Load this skill whenever the user
+  mentions CO-DEV, dev session, eval session, checkpoint, or uses response
+  prefixes like [PLAN], [IMPL], [ISSUE], [DONE], [QUESTION], [CHECKPOINT].
+  This is the *reference* skill — for procedural rituals see co-dev-resume,
+  co-dev-handoff, co-dev-phase.
+version: 0.4.0
 ---
 
-# CO-DEV Conventions
+# CO-DEV Conventions — Always-On Rules
 
-CO-DEV is a workflow framework that splits a single project across two independent Claude sessions to prevent context contamination: one session develops, the other evaluates. Sessions communicate asynchronously via the local filesystem using the CO-DEV MCP tools.
+CO-DEV splits a project across two independent Claude sessions (Developer / Evaluator) to prevent context contamination. Sessions communicate asynchronously through the local filesystem via CO-DEV MCP tools.
+
+**Role definitions live in `co-dev/ROLE-GUIDE.md`** (scaffolded by `codev_init`). This skill does NOT redefine them — see that file for role boundaries, inbox rules, and session ID formats.
+
+## Related Skills (Index)
+
+| Skill | When to load |
+|---|---|
+| `co-dev-resume` | At the START of every session — restore context before working. |
+| `co-dev-handoff` | At the END of every session — checkpoint and write to the other role's inbox. |
+| `co-dev-phase` | When checking phase exit conditions or running `/phase`. |
+
+This skill stays loaded for the duration of a CO-DEV session; the three above are invoked at specific moments.
 
 ## Data Layout
 
 Every CO-DEV project has two layers:
 
 ```
-co-dev/                          ← git-tracked (human-readable)
+co-dev/                          ← git-tracked (human-readable content)
   COLLABO.md                     ← collaboration principles
-  ROLE-GUIDE.md                  ← role definitions
+  ROLE-GUIDE.md                  ← role definitions (source of truth)
   TASK.md                        ← current sprint tasks and acceptance criteria
-  EVAL-CRITERIA.md               ← evaluation criteria (Evaluator reads this)
+  EVAL-CRITERIA.md               ← evaluation rubric (Evaluator only)
   communication/
     CHANGELOG.md                 ← append-only session history
     ISSUES.md                    ← issue tracker
     dev-state.md                 ← latest Developer session snapshot
     eval-state.md                ← latest Evaluator evaluation result
 
-co-dev/.data/                    ← .gitignored (machine-readable, MCP storage)
-  sessions/{session_id}.json     ← SessionContext (codev_save/get_context)
-  checkpoints/{session_id}/*.json ← Checkpoint records
-  inbox/developer.json           ← Developer inbox
-  inbox/evaluator.json           ← Evaluator inbox
+co-dev/.data/                    ← .gitignored (machine-readable MCP storage)
+  sessions/{session_id}.json
+  checkpoints/{session_id}/*.json
+  inbox/developer.json
+  inbox/evaluator.json
 ```
 
-`CODEV_DATA_DIR` resolves the `.data/` path. Set by `codev_init` via `.claude/settings.json`.
-Priority: `CODEV_DATA_DIR` env var → `{cwd}/co-dev/.data/` → error.
+`CODEV_DATA_DIR` resolves the `.data/` path. Priority: project-local `{cwd}/co-dev/.data/` → `CODEV_DATA_DIR` env var → `~/.co-dev/` fallback. See [README.md](../../../README.md) for details.
 
-## Session Roles
-
-| Role | Responsibility | Behavior |
-|------|---------------|----------|
-| Developer | Code generation, implementation, planning | Full context; write code |
-| Evaluator | Code review, quality evaluation, independent critique | Read output only; no implementation decisions |
-
-Evaluator must NOT have seen the Developer's implementation choices during the same session. Load `EVAL-CRITERIA.md` at the start of every Evaluator session.
-
-## Official Session Protocol (README)
-
-```
-1. codev_check_inbox(role)                          ← always first (YOUR role)
-2. Read co-dev/TASK.md                              ← check current sprint tasks
-3. Do the work
-4. codev_mark_done(role, session_id, summary,       ← always last (inbox only)
-                   action_required)
-5. [After eval ALL PASS] codev_finalize(...)        ← CHANGELOG + state.md 확정
-```
-
-- `mark_done` = inbox write only. CHANGELOG/state는 건드리지 않음.
-- `codev_finalize` = eval ALL PASS 확정 후에만 사용. CHANGELOG.md, state.md 갱신.
-
-## Response Prefix Rules
+## Response Prefix Rules (Always On)
 
 Always prefix responses with the appropriate tag:
 
 | Prefix | Use when |
-|--------|----------|
+|---|---|
 | `[PLAN]` | Presenting a work plan before starting |
 | `[IMPL]` | Providing implementation code |
 | `[ISSUE]` | A problem found that needs attention |
 | `[DONE]` | A specific task is complete |
-| `[QUESTION]` | A decision needed — max 2 questions, A/B/C format |
-| `[CHECKPOINT]` | Session-end summary for handoff |
+| `[QUESTION]` | A decision is needed — max 2 questions, A/B/C format |
+| `[CHECKPOINT]` | Session-end handoff summary |
 
-## Communication Rules
+The prefix governs the *type* of content the user expects. Mixing types in one response confuses handoff; split into multiple tagged sections instead.
 
-- Ask at most **2 questions per response**, presented as multiple choice.
-- If proceeding on an assumption, state it explicitly.
-- Never unilaterally decide: file structure changes, external library additions, API/schema changes, error handling strategy.
+## Communication Rules (Always On)
 
-## Phase Gate Definitions
+- Ask at most **2 questions per response**, presented as A/B/C multiple choice.
+- If proceeding on an assumption, state the assumption explicitly.
+- Never decide unilaterally on: file structure changes, external library additions, API/schema changes, error handling strategy. These require `[QUESTION]` first.
 
-See `references/phase-gates.md` for full conditions. Summary:
+## Plugin Commands (Index)
 
-| Phase | Name | Exit Condition |
-|-------|------|---------------|
-| 1 | Planning | Contracts and approach confirmed |
-| 2 | Implementation | Build succeeds, basic behavior verified |
-| 3 | Review | DRY, types, naming, error handling reviewed |
-| 4 | Evaluation | Evaluator PASS, no open issues |
+| Command | Entry to |
+|---|---|
+| `/init` | First-time project setup — creates `co-dev/` structure |
+| `/start dev` | Developer session — loads `co-dev-resume` then begins |
+| `/start eval` | Evaluator session — loads `co-dev-resume` then begins |
+| `/checkpoint` | Shortcut that invokes `co-dev-handoff` ritual |
+| `/phase` | Shortcut that invokes `co-dev-phase` check |
 
-## Plugin Commands
+## References
 
-| Command | When to use |
-|---------|------------|
-| `/init` | Once, on a brand-new project — creates co-dev/ structure |
-| `/start dev` | Beginning every Developer session |
-| `/start eval` | Beginning every Evaluator session |
-| `/checkpoint` | Save checkpoint to MCP storage (lightweight — no markdown updates) |
-| `/phase` | Check exit conditions; `/phase advance` to move to next phase |
+- [references/checkpoint-format.md](references/checkpoint-format.md) — `[CHECKPOINT]` block structure.
+- [references/phase-gates.md](references/phase-gates.md) — phase definitions (mirrored in `co-dev-phase` skill).
 
-## MCP Tool Reference
+## What This Skill Does NOT Cover
 
-| Tool | Purpose |
-|------|---------|
-| `codev_init` | Create co-dev/ + .data/ + .claude/settings.json |
-| `codev_save_context` | Persist [CONTEXT] block |
-| `codev_get_context` | Load [CONTEXT] block |
-| `codev_list_sessions` | List all known session IDs |
-| `codev_save_checkpoint` | Persist [CHECKPOINT] block (auto-increment index) |
-| `codev_read_checkpoint` | Read latest or specific checkpoint |
-| `codev_list_checkpoints` | Paginated checkpoint metadata |
-| `codev_check_inbox` | Read YOUR inbox (marks as read). Role param = YOUR role. |
-| `codev_mark_done` | Write to other role's inbox (inbox only, no CHANGELOG/state) |
-| `codev_finalize` | Commit confirmed results to CHANGELOG.md + state.md (after eval PASS) |
-| `codev_detect_role` | Keyword-score text to infer Dev vs Eval role |
+- **Role definitions, boundaries, session ID formats** — in `co-dev/ROLE-GUIDE.md`.
+- **Session start procedure** — in `co-dev-resume` skill.
+- **Session end procedure** — in `co-dev-handoff` skill.
+- **Phase gate details** — in `co-dev-phase` skill.
+- **MCP tool parameter schemas** — in each tool's `description` (not duplicated here to prevent drift).
