@@ -183,6 +183,7 @@ co-dev/.data/           — runtime store (.gitignored)
 │   └── co-dev-task-decomposer.md
 └── skills/
     ├── co-dev-conventions/     — always-on (data layout, prefix rules, index)
+    │   └── references/         — checkpoint format spec, phase gate definitions
     ├── co-dev-resume/          — session start ritual
     ├── co-dev-handoff/         — session end ritual
     └── co-dev-phase/           — phase gate check
