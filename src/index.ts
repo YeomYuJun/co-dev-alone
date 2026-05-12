@@ -11,6 +11,7 @@ import { registerFinalizeTools } from "./tools/finalize.js";
 import { registerInboxTools } from "./tools/inbox.js";
 import { registerInitTools } from "./tools/init.js";
 import { registerRoleTools } from "./tools/role.js";
+import { registerSyncTools } from "./tools/sync.js";
 
 const server = new McpServer({ name: "co-dev-mcp-server", version: "0.3.0" });
 
@@ -20,6 +21,7 @@ registerCheckpointTools(server);
 registerRoleTools(server);
 registerInboxTools(server);
 registerFinalizeTools(server);
+registerSyncTools(server);
 
 async function main(): Promise<void> {
   const transport = new StdioServerTransport();

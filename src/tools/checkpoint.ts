@@ -84,8 +84,9 @@ Returns: Confirmation with checkpoint_id and full [CHECKPOINT] block.`,
     } catch (err) {
       return { content: [{ type: "text", text: `Error saving checkpoint: ${err instanceof Error ? err.message : String(err)}` }] };
     }
+    const hint = `\n\n→ next: if this is session end, call codev_mark_done to notify the other role. Checkpoints are not surfaced to the other session without an inbox message.`;
     return {
-      content: [{ type: "text", text: `[DONE] Checkpoint '${cp.checkpoint_id}' saved.\n\n${formatCheckpointMarkdown(cp)}` }],
+      content: [{ type: "text", text: `[DONE] Checkpoint '${cp.checkpoint_id}' saved.\n\n${formatCheckpointMarkdown(cp)}${hint}` }],
       structuredContent: { saved: true, checkpoint: cp } as Record<string, unknown>,
     };
   });

@@ -8,5 +8,8 @@ temp/
 /extension/node_modules/
 /extension/out/
 
+# plugin: skills are generated from src/templates/skills/ before packaging
+/plugin/skills/
+
 # test
 test-e2e.mjs
